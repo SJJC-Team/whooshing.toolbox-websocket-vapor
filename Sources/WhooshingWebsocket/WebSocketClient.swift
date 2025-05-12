@@ -9,6 +9,7 @@ import NIOSSL
 import NIOTransportServices
 import Atomics
 import WhooshingClient
+import Logging
 
 public final class WebSocketClient: Sendable {
     public enum Error: Swift.Error, LocalizedError {
@@ -35,11 +36,19 @@ public final class WebSocketClient: Sendable {
         /// Maximum frame size after aggregation.
         /// See `NIOWebSocketFrameAggregator` for details.
         public var maxAccumulatedFrameSize: Int
+        
+        public var requestHandler: (any RequestIOHandler)?
+        
+        public var logger: Logger?
 
         public init(
+            requestHandler: (any RequestIOHandler)? = nil,
+            logger: Logger? = nil,
             tlsConfiguration: TLSConfiguration? = nil,
             maxFrameSize: Int = 1 << 14
         ) {
+            self.requestHandler = requestHandler
+            self.logger = logger
             self.tlsConfiguration = tlsConfiguration
             self.maxFrameSize = maxFrameSize
             self.minNonFinalFragmentSize = 0
@@ -193,7 +202,9 @@ public final class WebSocketClient: Sendable {
                 // They are then removed upon completion only to be re-added in `addHTTPClientHandlers`.
                 // This is done because the HTTP decoder is not valid after an upgrade, the CONNECT request being counted as one.
                 do {
-//                    try channel.pipeline.syncOperations.addHandler(RequestHandler)
+                    if let handler = self.configuration.requestHandler {
+                        try channel.pipeline.syncOperations.addHandler(RequestHandler(promise: nil, logger: self.configuration.logger, byteBufferAllocator: channel.allocator, ioHandler: handler))
+                    }
                     try channel.pipeline.syncOperations.addHandler(encoder.value)
                     try channel.pipeline.syncOperations.addHandler(decoder.value)
                     try channel.pipeline.syncOperations.addHandler(proxyRequestHandler)
