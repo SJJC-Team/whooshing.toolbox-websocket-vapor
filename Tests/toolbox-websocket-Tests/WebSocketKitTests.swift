@@ -5,7 +5,7 @@ import NIOExtras
 import NIOHTTP1
 import NIOSSL
 import NIOWebSocket
-@testable import WebSocketKit
+@testable import WhooshingWebsocket
 
 final class WebSocketKitTests: XCTestCase {
     override func setUp() async throws {

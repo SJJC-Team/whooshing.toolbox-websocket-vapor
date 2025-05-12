@@ -8,6 +8,7 @@ import NIOWebSocket
 import NIOSSL
 import NIOTransportServices
 import Atomics
+import WhooshingClient
 
 public final class WebSocketClient: Sendable {
     public enum Error: Swift.Error, LocalizedError {
@@ -192,6 +193,7 @@ public final class WebSocketClient: Sendable {
                 // They are then removed upon completion only to be re-added in `addHTTPClientHandlers`.
                 // This is done because the HTTP decoder is not valid after an upgrade, the CONNECT request being counted as one.
                 do {
+//                    try channel.pipeline.syncOperations.addHandler(RequestHandler)
                     try channel.pipeline.syncOperations.addHandler(encoder.value)
                     try channel.pipeline.syncOperations.addHandler(decoder.value)
                     try channel.pipeline.syncOperations.addHandler(proxyRequestHandler)
