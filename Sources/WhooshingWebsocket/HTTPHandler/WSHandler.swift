@@ -3,6 +3,10 @@ import Logging
 import WhooshingClient
 import ErrorHandle
 
+#if WHOOSHING_VAPOR
+import Vapor
+#endif
+
 public protocol WSIOHandler: Sendable {
     func send(dataChunk: ByteBuffer, context: ChannelHandlerContext) -> EventLoopFuture<ByteBuffer>
     func get(dataChunk: ByteBuffer, context: ChannelHandlerContext) -> EventLoopFuture<ByteBuffer>
