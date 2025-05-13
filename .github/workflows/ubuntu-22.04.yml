@@ -1,4 +1,4 @@
-name: Swift Build Workflow
+name: ubuntu-22.04(swift 6.0)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           ${{ runner.os }}-swift-
 
     - name: Build
-      run: swift build -v
+      run: swift build
 
     - name: Run tests
-      run: swift test -v
+      run: swift test

@@ -44,7 +44,7 @@ public final class WebSocketClient: Sendable {
             ioHandler: (any WSIOHandler)? = nil,
             logger: Logger? = nil,
             tlsConfiguration: TLSConfiguration? = nil,
-            maxFrameSize: Int = 1 << 14,
+            maxFrameSize: Int = 1 << 14
         ) {
             self.ioHandler = ioHandler
             self.logger = logger
