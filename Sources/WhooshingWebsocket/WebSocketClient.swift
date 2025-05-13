@@ -8,7 +8,6 @@ import NIOWebSocket
 import NIOSSL
 import NIOTransportServices
 import Atomics
-import WhooshingClient
 import Logging
 
 public final class WebSocketClient: Sendable {
@@ -37,17 +36,17 @@ public final class WebSocketClient: Sendable {
         /// See `NIOWebSocketFrameAggregator` for details.
         public var maxAccumulatedFrameSize: Int
         
-        public var requestHandler: (any RequestIOHandler)?
-        
         public var logger: Logger?
+        
+        public var ioHandler: (any WSIOHandler)?
 
         public init(
-            requestHandler: (any RequestIOHandler)? = nil,
+            ioHandler: (any WSIOHandler)? = nil,
             logger: Logger? = nil,
             tlsConfiguration: TLSConfiguration? = nil,
-            maxFrameSize: Int = 1 << 14
+            maxFrameSize: Int = 1 << 14,
         ) {
-            self.requestHandler = requestHandler
+            self.ioHandler = ioHandler
             self.logger = logger
             self.tlsConfiguration = tlsConfiguration
             self.maxFrameSize = maxFrameSize
@@ -56,11 +55,29 @@ public final class WebSocketClient: Sendable {
             self.maxAccumulatedFrameSize = Int.max
         }
     }
+    
+    final class TempParas: @unchecked Sendable {
+        private let lock = NIOLock()
+        
+        var isUpgraded: Bool {
+            get { lock.withLock { __isUpgraded } }
+            set { lock.withLock { __isUpgraded = newValue } }
+        }
+        private var __isUpgraded = false
+        
+        var isLastUpgradeReqChunk: Bool {
+            get { lock.withLock { __isLastUpgradeReqChunk } }
+            set { lock.withLock { __isLastUpgradeReqChunk = newValue } }
+        }
+        private var __isLastUpgradeReqChunk = false
+    }
 
     let eventLoopGroupProvider: EventLoopGroupProvider
     let group: any EventLoopGroup
     let configuration: Configuration
     let isShutdown = ManagedAtomic(false)
+    
+    private let tempParas = TempParas()
 
     public init(eventLoopGroupProvider: EventLoopGroupProvider, configuration: Configuration = .init()) {
         self.eventLoopGroupProvider = eventLoopGroupProvider
@@ -133,13 +150,30 @@ public final class WebSocketClient: Sendable {
                         upgradeRequestHeaders.add(contentsOf: proxyHeaders)
                     }
                 }
-
+                
+                // 创建 WebSocketHandler，具体是否添加取决于 Configuration 中的 iohandler 是否不为 nil
+                // 该 handler 为 Duplex 双向 Handler
+                let wsHandler: WSHandler?
+                
+                if let ioHandler = self.configuration.ioHandler {
+                    wsHandler = .init(tempPara: self.tempParas, ioHandler: ioHandler, logger: self.configuration.logger)
+                } else {
+                    wsHandler = nil
+                }
+                
+                // 将 UpgradeHandler 的 HTTP 请求的 IOData 转为 ByteBuffer，方便后方的 WSHandler 处理
+                // 该 Handler 为 OutBound Handler，只处理流出流量
+                // 将会在成功 Upgraded 之后被移除，届时只剩下 WSHandler 处理 WebSocket Frame
+                // 当然，如果 Configuration 中的 iohandler 为 nil，则上述都不会发生，该 WebSocket 将会照原来的 TLS 或明文传输
+                let ioDataToBufferHandler = IODataToBufferHandler()
+                
                 let httpUpgradeRequestHandler = HTTPUpgradeRequestHandler(
                     host: host,
                     path: uri,
                     query: query,
                     headers: upgradeRequestHeaders,
-                    upgradePromise: upgradePromise
+                    upgradePromise: upgradePromise,
+                    tempPara: self.tempParas
                 )
                 let httpUpgradeRequestHandlerBox = NIOLoopBound(httpUpgradeRequestHandler, eventLoop: channel.eventLoop)
 
@@ -147,6 +181,9 @@ public final class WebSocketClient: Sendable {
                     maxFrameSize: self.configuration.maxFrameSize,
                     automaticErrorHandling: true,
                     upgradePipelineHandler: { channel, req in
+                        if wsHandler != nil {
+                            self.tempParas.isUpgraded = true
+                        }
                         return WebSocket.client(on: channel, config: .init(clientConfig: self.configuration), onUpgrade: onUpgrade)
                     }
                 )
@@ -156,6 +193,11 @@ public final class WebSocketClient: Sendable {
                     completionHandler: { context in
                         upgradePromise.succeed(())
                         channel.pipeline.syncOperations.removeHandler(httpUpgradeRequestHandlerBox.value, promise: nil)
+                        if wsHandler != nil {
+                            // Upgraded 之后，移除用于将 Upgrade HTTP 请求从 IOData 转 ByteBuffer 的 Handler
+                            // 因为接下来发送的不再是 HTTP 请求，而是 WebSocket Frame
+                            channel.pipeline.syncOperations.removeHandler(ioDataToBufferHandler, promise: nil)
+                        }
                     }
                 )
                 let configBox = NIOLoopBound(config, eventLoop: channel.eventLoop)
@@ -173,6 +215,15 @@ public final class WebSocketClient: Sendable {
                     }
 
                     return channel.eventLoop.submit {
+                        if let wsh = wsHandler {
+                            // 添加出入口粘包处理 Handler，并设置 WebSocket Handler
+                            try channel.pipeline.syncOperations.addHandlers([
+                                LengthFieldPrepender(lengthFieldLength: .eight, lengthFieldEndianness: .big),
+                                ByteToMessageHandler(LengthFieldBasedFrameDecoder(lengthFieldLength: .eight, lengthFieldEndianness: .big)),
+                                wsh,
+                                ioDataToBufferHandler
+                            ])
+                        }
                         try channel.pipeline.syncOperations.addHTTPClientHandlers(
                             leftOverBytesStrategy: .forwardBytes,
                             withClientUpgrade: configBox.value
@@ -202,9 +253,6 @@ public final class WebSocketClient: Sendable {
                 // They are then removed upon completion only to be re-added in `addHTTPClientHandlers`.
                 // This is done because the HTTP decoder is not valid after an upgrade, the CONNECT request being counted as one.
                 do {
-                    if let handler = self.configuration.requestHandler {
-                        try channel.pipeline.syncOperations.addHandler(RequestHandler(promise: nil, logger: self.configuration.logger, byteBufferAllocator: channel.allocator, ioHandler: handler))
-                    }
                     try channel.pipeline.syncOperations.addHandler(encoder.value)
                     try channel.pipeline.syncOperations.addHandler(decoder.value)
                     try channel.pipeline.syncOperations.addHandler(proxyRequestHandler)
