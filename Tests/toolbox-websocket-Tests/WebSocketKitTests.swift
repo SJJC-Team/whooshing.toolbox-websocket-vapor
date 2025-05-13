@@ -8,9 +8,7 @@ import NIOWebSocket
 @testable import WhooshingWebsocket
 
 final class WebSocketKitTests: XCTestCase {
-    override func setUp() async throws {
-        fflush(stdout)
-    }
+    override func setUp() async throws {}
 
     func testWebSocketEcho() throws {
         let server = try ServerBootstrap.webSocket(on: self.elg) { req, ws in
