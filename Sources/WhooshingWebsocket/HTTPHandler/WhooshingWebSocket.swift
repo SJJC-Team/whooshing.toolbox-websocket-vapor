@@ -1,7 +1,0 @@
-
-
-public protocol WhooshingWebSocket: Sendable {
-    
-    
-    
-}
