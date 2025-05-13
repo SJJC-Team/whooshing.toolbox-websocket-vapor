@@ -18,7 +18,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.24.0"),
         .package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.16.0"),
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
-        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-basic.git", .upToNextMajor(from: "1.2.3")),
         .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-client.git", .upToNextMajor(from: "1.0.3"))
     ],
     targets: [

@@ -8,7 +8,6 @@ final class AsyncWebSocketKitTests: XCTestCase {
 
     override func setUp() async throws {
         // Handy for catching hangs in the tests. See https://github.com/apple/swift-corelibs-xctest/issues/422#issuecomment-1310952437
-        fflush(stdout)
     }
 
     func testWebSocketEcho() async throws {
