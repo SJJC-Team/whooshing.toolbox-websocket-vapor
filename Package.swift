@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "whooshing.toolbox-websocket",
+    name: "whooshing.toolbox-websocket-vapor",
     platforms: [
         .macOS(.v10_15),
         .iOS(.v13),
@@ -18,7 +18,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.24.0"),
         .package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.16.0"),
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
-        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-client.git", .upToNextMajor(from: "1.0.3"))
+        .package(url: "https://github.com/SJJC-Team/whooshing-vapor.git", from: "1.0.0"),
+        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-client-vapor.git", .upToNextMajor(from: "1.0.3"))
     ],
     targets: [
         .target(
@@ -33,7 +34,8 @@ let package = Package(
                 .product(name: "NIOWebSocket", package: "swift-nio"),
                 .product(name: "NIOTransportServices", package: "swift-nio-transport-services"),
                 .product(name: "Atomics", package: "swift-atomics"),
-                .product(name: "WhooshingClient", package: "whooshing.toolbox-client"),
+                .product(name: "WhooshingClient", package: "whooshing.toolbox-client-vapor"),
+                .product(name: "Vapor", package: "whooshing-vapor")
             ],
             swiftSettings: swiftSettings
         ),
@@ -54,4 +56,5 @@ var swiftSettings: [SwiftSetting] { [
     .enableUpcomingFeature("DisableOutwardActorInference"),
     .enableUpcomingFeature("MemberImportVisibility"),
     .enableExperimentalFeature("StrictConcurrency=complete"),
+    .define("WHOOSHING_VAPOR")
 ] }
