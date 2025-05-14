@@ -39,6 +39,15 @@ public final class ApiWebSocket: WhooshingWebSocket, Sendable {
     }
     
     #if WHOOSHING_VAPOR
+    /// 使用 Vapor `Application` 实例初始化 APIWebSocket 实例。
+    ///
+    /// 此构造函数会使用 Vapor 提供的事件循环组、日志器来配置底层客户端，
+    /// 并将用户凭证与令牌存储到请求上下文中，供后续身份验证使用。
+    ///
+    /// - Parameters:
+    ///   - credential: 用于身份验证的凭证字符串。
+    ///   - token: 用于身份验证的令牌字符串。
+    ///   - app: 当前的 Vapor 应用实例。
     public init(credential: String, token: String, app: Application) {
         self.logger = app.logger
         self.eventLoop = app.eventLoopGroup.next()
