@@ -17,7 +17,7 @@ import Vapor
 /// 该类封装了从 HTTP 到 WebSocket 的连接升级流程，
 /// 包括首次 ping 测试连接、发送升级请求以及建立加密的 WebSocket 通道，
 /// 方便用户通过异步接口安全地连接到指定的 WebSocket 服务。
-public final class APIWebSocket: WhooshingWebSocket, Sendable {
+public final class ApiWebSocket: WhooshingWebSocket, Sendable {
     
     /// 可选的日志记录器，用于输出调试和运行时信息。
     public let logger: Logger?
@@ -37,7 +37,14 @@ public final class APIWebSocket: WhooshingWebSocket, Sendable {
         self.eventLoop = eventLoop
         self.apiClient = .init(credential: credential, token: token, eventLoop: eventLoop, logger: logger)
     }
-
+    
+    #if WHOOSHING_VAPOR
+    public init(credential: String, token: String, app: Application) {
+        self.logger = app.logger
+        self.eventLoop = app.eventLoopGroup.next()
+        self.apiClient = .init(credential: credential, token: token, eventLoop: eventLoop, logger: logger)
+    }
+    #endif
 
     /// 异步建立到指定 URL 的 WebSocket 连接。
     ///
@@ -66,7 +73,18 @@ public final class APIWebSocket: WhooshingWebSocket, Sendable {
         self.logger?.debug("API.WS.Client-升级为 WebSocket 通道请求: \(url)")
         try await self.establishWebsocketConnect(configuration: configuration, onUpgrade: onUpgrade)
     }
+    
+    /// 定义 APIWebSocket 相关的错误类型。
+    public enum Err: String, ErrList {
+        public var domain: String { "woo.sys.api.websocket.err" }
+        case responseError = "服务器返回的响应不正确"
+        case unknowError = "发送请求时发生未知错误"
+    }
+}
 
+extension WebSocketFrameEncoder: @unchecked @retroactive Sendable {}
+
+extension ApiWebSocket {
     private func firstPing(uri: WebURI) async throws {
         let res = try await apiClient.get(uri)
         guard res.status == .switchingProtocols else {
@@ -124,13 +142,4 @@ public final class APIWebSocket: WhooshingWebSocket, Sendable {
             channel.close(promise: nil)
         }
     }
-    
-    /// 定义 APIWebSocket 相关的错误类型。
-    public enum Err: String, ErrList {
-        public var domain: String { "woo.sys.api.websocket.err" }
-        case responseError = "服务器返回的响应不正确"
-        case unknowError = "发送请求时发生未知错误"
-    }
 }
-
-extension WebSocketFrameEncoder: @unchecked @retroactive Sendable {}
