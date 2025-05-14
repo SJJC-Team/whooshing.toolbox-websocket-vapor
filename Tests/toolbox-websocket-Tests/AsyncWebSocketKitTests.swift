@@ -2,7 +2,7 @@ import XCTest
 import NIO
 import NIOHTTP1
 import NIOWebSocket
-@testable import WhooshingWebsocket
+@testable import WhooshingWebSocket
 
 final class AsyncWebSocketKitTests: XCTestCase {
 

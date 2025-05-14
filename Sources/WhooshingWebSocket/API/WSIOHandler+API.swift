@@ -10,7 +10,6 @@ import Vapor
 #endif
 
 enum API {
-    
     struct WSIOCrypto: WSIOHandler, Sendable {
         
         let key: Crypto.Symm.Key

@@ -5,7 +5,7 @@ import NIOExtras
 @preconcurrency import NIOHTTP1
 @preconcurrency import NIOSSL
 import NIOWebSocket
-@testable import WhooshingWebsocket
+@testable import WhooshingWebSocket
 
 extension ServerBootstrap {
     static func webSocket(

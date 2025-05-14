@@ -10,7 +10,7 @@ let package = Package(
         .tvOS(.v13)
     ],
     products: [
-        .library(name: "WhooshingWebsocket", targets: ["WhooshingWebsocket"]),
+        .library(name: "WhooshingWebSocket", targets: ["WhooshingWebSocket"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.78.0"),
@@ -23,7 +23,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "WhooshingWebsocket",
+            name: "WhooshingWebSocket",
             dependencies: [
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
@@ -42,7 +42,7 @@ let package = Package(
         .testTarget(
             name: "toolbox-websocket-Tests",
             dependencies: [
-                .target(name: "WhooshingWebsocket"),
+                .target(name: "WhooshingWebSocket"),
             ],
             swiftSettings: swiftSettings
         ),
