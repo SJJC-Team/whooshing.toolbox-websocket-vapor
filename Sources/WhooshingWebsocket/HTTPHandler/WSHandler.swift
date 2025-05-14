@@ -27,12 +27,10 @@ final class WSHandler: ChannelDuplexHandler, Sendable {
     
     private let logger: Logger?
     private let ioHandler: any WSIOHandler
-    private unowned let tempPara: WebSocketClient.TempParas
     
-    init(tempPara: WebSocketClient.TempParas, ioHandler: any WSIOHandler, logger: Logger? = nil) {
+    init(ioHandler: any WSIOHandler, logger: Logger? = nil) {
         self.logger = logger
         self.ioHandler = ioHandler
-        self.tempPara = tempPara
     }
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -53,18 +51,9 @@ final class WSHandler: ChannelDuplexHandler, Sendable {
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = unwrapOutboundIn(data)
         guard data.readableBytes > 0 else { return }
-        
+
         let r = self.ioHandler.send(dataChunk: data, context: context).flatMap { data in
-            var buffer: ByteBuffer
-            if self.tempPara.isUpgraded && self.tempPara.isLastUpgradeReqChunk {
-                // Upgrade 请求的最后一个 Chunk
-                buffer = ChunkTool.eof
-                var d = data
-                buffer.writeBuffer(&d)
-            } else {
-                buffer = data
-            }
-            return context.writeAndFlush(self.wrapOutboundOut(buffer))
+            return context.writeAndFlush(self.wrapOutboundOut(data))
         }.flatMapErrorThrowing { err in
             self.errorHappend(context: context, error: err)
         }
@@ -75,21 +64,15 @@ final class WSHandler: ChannelDuplexHandler, Sendable {
     }
     
     func channelRegistered(context: ChannelHandlerContext) {
-        ioHandler.connectionStart(context: context).whenComplete { res in
-            switch res {
-            case .success(): self.tempPara.isUpgraded = false; self.tempPara.isLastUpgradeReqChunk = false
-            case .failure(let err): self.errorHappend(context: context, error: err)
-            }
+        ioHandler.connectionStart(context: context).whenFailure { err in
+            self.errorHappend(context: context, error: err)
         }
         context.fireChannelRegistered()
     }
     
     func channelUnregistered(context: ChannelHandlerContext) {
-        ioHandler.connectionEnd(context: context).whenComplete { res in
-            switch res {
-            case .success(): self.tempPara.isUpgraded = false; self.tempPara.isLastUpgradeReqChunk = false
-            case .failure(let err): self.errorHappend(context: context, error: err)
-            }
+        ioHandler.connectionEnd(context: context).whenFailure { err in
+            self.errorHappend(context: context, error: err)
         }
         context.fireChannelUnregistered()
     }

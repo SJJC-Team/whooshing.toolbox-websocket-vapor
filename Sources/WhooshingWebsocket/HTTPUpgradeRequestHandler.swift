@@ -11,17 +11,15 @@ final class HTTPUpgradeRequestHandler: ChannelInboundHandler, RemovableChannelHa
     let query: String?
     let headers: HTTPHeaders
     let upgradePromise: EventLoopPromise<Void>
-    private unowned let tempPara: WebSocketClient.TempParas
 
     private var requestSent = false
 
-    init(host: String, path: String, query: String?, headers: HTTPHeaders, upgradePromise: EventLoopPromise<Void>, tempPara: WebSocketClient.TempParas) {
+    init(host: String, path: String, query: String?, headers: HTTPHeaders, upgradePromise: EventLoopPromise<Void>) {
         self.host = host
         self.path = path
         self.query = query
         self.headers = headers
         self.upgradePromise = upgradePromise
-        self.tempPara = tempPara
     }
 
     func channelActive(context: ChannelHandlerContext) {
@@ -61,11 +59,9 @@ final class HTTPUpgradeRequestHandler: ChannelInboundHandler, RemovableChannelHa
             uri: uri,
             headers: headers
         )
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-
         let emptyBuffer = context.channel.allocator.buffer(capacity: 0)
         let body = HTTPClientRequestPart.body(.byteBuffer(emptyBuffer))
-        self.tempPara.isLastUpgradeReqChunk = true
+        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
         context.write(self.wrapOutboundOut(body), promise: nil)
         context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
     }
