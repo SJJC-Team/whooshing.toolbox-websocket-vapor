@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "whooshing.toolbox-websocket",
+    name: "whooshing.toolbox-websocket-vapor",
     platforms: [
         .macOS(.v10_15),
         .iOS(.v13),
@@ -33,7 +33,8 @@ let package = Package(
                 .product(name: "NIOWebSocket", package: "swift-nio"),
                 .product(name: "NIOTransportServices", package: "swift-nio-transport-services"),
                 .product(name: "Atomics", package: "swift-atomics"),
-                .product(name: "WhooshingClient", package: "whooshing.toolbox-client"),
+                .product(name: "WhooshingClient", package: "whooshing.toolbox-client-vapor"),
+                .product(name: "Vapor", package: "whooshing-vapor")
             ],
             swiftSettings: swiftSettings
         ),
