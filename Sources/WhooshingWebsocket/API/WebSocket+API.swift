@@ -10,12 +10,28 @@ import NIOWebSocket
 import Vapor
 #endif
 
+/// APIWebSocket 是基于 Whooshing 协议的 WebSocket 客户端实现，
+/// 提供连接建立、协议升级、安全通道初始化等功能，
+/// 支持自定义事件循环和日志记录。
+///
+/// 该类封装了从 HTTP 到 WebSocket 的连接升级流程，
+/// 包括首次 ping 测试连接、发送升级请求以及建立加密的 WebSocket 通道，
+/// 方便用户通过异步接口安全地连接到指定的 WebSocket 服务。
 public final class APIWebSocket: WhooshingWebSocket, Sendable {
     
+    /// 可选的日志记录器，用于输出调试和运行时信息。
     public let logger: Logger?
+    
     private let apiClient: ApiClient
     private let eventLoop: any EventLoop
     
+    /// 使用指定的凭证和令牌初始化 APIWebSocket 实例。
+    ///
+    /// - Parameters:
+    ///   - credential: 用于身份验证的凭证字符串。
+    ///   - token: 用于身份验证的令牌字符串。
+    ///   - eventLoop: 指定的事件循环，用于网络操作。
+    ///   - logger: 可选的日志记录器，默认值为 nil。
     public init(credential: String, token: String, eventLoop: any EventLoop, logger: Logger? = nil) {
         self.logger = logger
         self.eventLoop = eventLoop
@@ -23,6 +39,17 @@ public final class APIWebSocket: WhooshingWebSocket, Sendable {
     }
 
 
+    /// 异步建立到指定 URL 的 WebSocket 连接。
+    ///
+    /// 该方法会先通过 HTTP 协议发送一次 ping 请求以确保服务器连接可用，
+    /// 然后发送 WebSocket 升级请求，最终完成 WebSocket 通道的建立。
+    ///
+    /// - Parameters:
+    ///   - url: 目标 WebSocket 的 URI。
+    ///   - headers: HTTP 请求头，默认值为空。
+    ///   - configuration: WebSocket 客户端配置，默认使用默认配置。
+    ///   - onUpgrade: 成功升级为 WebSocket 后调用的回调，提供已连接的 WebSocket。
+    /// - Throws: 如果连接、握手或升级过程中出现任何错误，会抛出对应的异常。
     @preconcurrency
     public func connect(
         to url: WebURI,
@@ -98,6 +125,7 @@ public final class APIWebSocket: WhooshingWebSocket, Sendable {
         }
     }
     
+    /// 定义 APIWebSocket 相关的错误类型。
     public enum Err: String, ErrList {
         public var domain: String { "woo.sys.api.websocket.err" }
         case responseError = "服务器返回的响应不正确"
