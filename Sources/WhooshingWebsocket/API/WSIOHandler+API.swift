@@ -5,6 +5,10 @@ import ErrorHandle
 import NIOFoundationCompat
 import Logging
 
+#if WHOOSHING_VAPOR
+import Vapor
+#endif
+
 enum API {
     
     struct WSIOCrypto: WSIOHandler, Sendable {
@@ -15,9 +19,9 @@ enum API {
         /// 发送请求时，进行编码并加密
         func send(dataChunk: ByteBuffer, context: ChannelHandlerContext) -> EventLoopFuture<ByteBuffer> {
             context.eventLoop.submit {
-                logger?.trace("API.WS.Client-发送数据中: 大小 \(dataChunk.readableBytes) \(context.channel.clientAddrInfo)")
+                logger?.trace("API.WS.Client-发送数据中: 大小 \(ChunkTool.formatByteSize(dataChunk.readableBytes)) \(context.channel.clientAddrInfo)")
                 do {
-                    return try Crypto.Symm.decrypt(.init(buffer: dataChunk), key: key)
+                    return try context.channel.allocator.buffer(data: Crypto.Symm.encrypt(dataChunk, key: key))
                 } catch {
                     throw Err.responseEncryptFailed.d(14090, #file, #line).subErr(error)
                 }
@@ -27,9 +31,9 @@ enum API {
         /// 收到响应时，进行解密并解码
         func get(dataChunk: ByteBuffer, context: ChannelHandlerContext) -> EventLoopFuture<ByteBuffer> {
             context.eventLoop.submit {
-                logger?.trace("API.WS.Client-接收数据中: 大小 \(dataChunk.readableBytes) \(context.channel.clientAddrInfo)")
+                logger?.trace("API.WS.Client-接收数据中: 大小 \(ChunkTool.formatByteSize(dataChunk.readableBytes)) \(context.channel.clientAddrInfo)")
                 do {
-                    return try context.channel.allocator.buffer(data: Crypto.Symm.encrypt(dataChunk, key: key))
+                    return try Crypto.Symm.decrypt(.init(buffer: dataChunk), key: key)
                 } catch {
                     throw Err.responseEncryptFailed.d(14091, #file, #line).subErr(error)
                 }
