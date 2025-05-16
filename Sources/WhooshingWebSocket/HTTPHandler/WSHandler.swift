@@ -81,5 +81,4 @@ final class WSHandler: ChannelDuplexHandler, Sendable {
         logger?.warning("\(error)")
         context.fireErrorCaught(error)
     }
-    
 }
