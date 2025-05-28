@@ -1,4 +1,4 @@
-# Whooshing 项目的服务模块依赖库
+# Whooshing 项目的 WebSocket 模块依赖库
 
 A fork from [websocket-kit](https://github.com/vapor/websocket-kit)
 
