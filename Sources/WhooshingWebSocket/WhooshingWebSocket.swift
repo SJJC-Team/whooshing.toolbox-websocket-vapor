@@ -153,10 +153,7 @@ extension WhooshingWebSocket {
     }
 
     private func establishWebsocketConnect(configuration: WebSocketClient.Configuration, onUpgrade: @Sendable @escaping (WebSocket) -> ()) async throws {
-        guard
-            let channel = client.channel,
-            let mainHandler = client.mainHandler
-        else {
+        guard let channel = client.channel else {
             throw WhooshingWebSocketErr.unknowError.d("TCP 连接不存在，无法创建 WebSocket 连接", 15003)
         }
 
@@ -168,11 +165,11 @@ extension WhooshingWebSocket {
         let wsHandler = WSHandler(ioHandler: ioHandler, logger: self.logger)
         
         self.logger?.trace("\(Self.loggerLabel)-在 TCP Channel 中建立 WebSocket Handler，并移除原有的 Client Handler")
-        try await channel.pipeline.removeHandler(mainHandler)
+        try await client.removeHTTPHandlers()
         try await channel.pipeline.addHandlers([
             wsHandler,
             WebSocketFrameEncoder(),
-            ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: ChunkTool.maxChunk))
+            ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: configuration.maxFrameSize))
         ])
 
         channel.eventLoop.flatSubmit {

@@ -34,11 +34,7 @@ final class WSHandler: ChannelDuplexHandler, Sendable {
     }
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var data = unwrapInboundIn(data)
-        
-        if data.readSlice(length: ChunkTool.eof.readableBytes) != ChunkTool.eof {
-            data.moveReaderIndex(to: 0)
-        }
+        let data = unwrapInboundIn(data)
         
         self.ioHandler.get(dataChunk: data, context: context).whenComplete { res in
             switch res {
